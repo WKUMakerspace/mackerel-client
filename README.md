@@ -7,4 +7,4 @@ Requires Python 3.6.
 ```bash
 python3 sprocket.py ip port
 ```
-`ip` defaults to `127.0.0.1`. `port` defaults to `4000`.
+`ip` defaults to `127.0.0.1`. `port` defaults to `4400`.
