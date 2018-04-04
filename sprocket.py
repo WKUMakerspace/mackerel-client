@@ -9,16 +9,16 @@ BUFFER_SIZE = 20
 
 async def socket_out(s):
     input_ = await input()
-    s.send(input_)
+    s.send(input_.encode('utf-8'))
 
 
 async def socket_in(s):
     output = await s.recv(BUFFER_SIZE)
-    print(output)
+    print(output.decode('utf-8'))
 
 
 def __main__():
-    parser = argparse.ArgumentParser(description="Tcp client for Liam")
+    parser = argparse.ArgumentParser(description="TCP client for Liam")
 
     parser.add_argument("ip", nargs='?', type=str, default='127.0.0.1')
     parser.add_argument("port", nargs='?', type=int, default=4000)
