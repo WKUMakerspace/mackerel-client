@@ -8,13 +8,15 @@ BUFFER_SIZE = 20
 
 
 async def socket_out(s):
-    input_ = await input()
-    s.send(input_.encode('utf-8'))
+    while True:
+        input_ = input()
+        s.send(input_.encode('utf-8'))
 
 
 async def socket_in(s):
-    output = await s.recv(BUFFER_SIZE)
-    print(output.decode('utf-8'))
+    while True:
+        output = s.recv(BUFFER_SIZE)
+        print(output.decode('utf-8'))
 
 
 def __main__():
