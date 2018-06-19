@@ -1,0 +1,66 @@
+{
+    "HELLO": {
+        "type": "any",
+        "min_args": 0,
+        "max_args": 0,
+        "arg_formats": []
+    },
+    
+    "EXIT": {
+        "type": "any",
+        "min_args": 0,
+        "max_args": 0,
+        "arg_formats": []
+    },
+
+    "USER_CHECK": {
+        "type": "any",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    },
+
+    "SIGNIN": {
+        "type": "kiosk",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    },
+    "SIGNOUT": {
+        "type": "kiosk",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    },
+    "USER_CREATE": {
+        "type": "kiosk",
+        "min_args": 3,
+        "max_args": 4,
+        "arg_formats": ["80[01][0-9]{6}", ".+", ".+", "[0-9]{10}"]
+    },
+
+    "QUEUE_ADD": {
+        "type": "tool",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    },
+    "QUEUE_READ": {
+        "type": "tool",
+        "min_args": 0,
+        "max_args": 0,
+        "arg_formats": []
+    },
+    "QUEUE_REMOVE": {
+        "type": "tool",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    },
+    "TOOL_USER_CHANGE": {
+        "type": "tool",
+        "min_args": 1,
+        "max_args": 1,
+        "arg_formats": ["80[01][0-9]{6}"]
+    }
+}
