@@ -7,6 +7,7 @@ from select import select
 import socket
 import time
 from threading import Thread
+from collections import deque
 
 BUFFER_SIZE = 100
 
@@ -28,6 +29,8 @@ class MackerelClient:
         self.running = False
 
         self.protocol = load(open("protocol.json"))
+        self.command_queue = deque()
+        self.command_history = []
 
     def connect(self):
         """
@@ -72,10 +75,10 @@ class MackerelClient:
             logging.warning("Attempting to run without a connection, "
                             "ignoring...")
         else:
-            ioloop = Thread(target=self.io, name="IO")
+            runner = Thread(target=self.runner, name="RUNNER")
             watcher = Thread(target=self.watch, name="WATCHER")
 
-            ioloop.start()
+            runner.start()
             watcher.start()
 
         while self.running:
@@ -95,13 +98,16 @@ class MackerelClient:
                     data = self.safe_read()
                     self.handle_output(data)
 
-    def io(self):
+    def runner(self):
         """
         Run basic I/O loop.
         """
         while self.running:
-            msg = input('> ')
-            self.run_command(msg)
+            if self.command_queue:
+                cmd = self.command_queue.popleft()
+                self.command_history.append([cmd, None])
+                self.run_command(cmd)
+            time.sleep(0.1)
 
     def valid_command(self, cmd):
         """
@@ -149,11 +155,19 @@ class MackerelClient:
             elif baseresp == "RESP":
                 logging.info("Command succeeded.")
                 if resp_params:
-                    print("Response parameters are: {0}".format('\t'.join(resp_params)))
+                    self.command_history[-1][1] = True
+                    logging.info("Response parameters are: {0}".format(
+                                 '\t'.join(resp_params)))
             elif baseresp == "RESP_SUCCESS":
                 logging.info("Command succeeded.")
+                self.command_history[-1][1] = True
             elif baseresp == "RESP_FAILURE":
                 logging.warning("Command failed.")
+                self.command_history[-1][1] = False
+
+    def queue_command(self, *cmd):
+        self.command_queue.append(';'.join(cmd))
+        return
 
     def run_command(self, cmd):
         """
