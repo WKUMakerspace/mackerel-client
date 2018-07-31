@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from json import load
+from json import loads
 import logging
 import re
 import socket
@@ -8,7 +8,7 @@ from select import select
 
 import time
 from collections import deque
-from pkg_resources import resource_stream
+from pkg_resources import resource_string
 
 BUFFER_SIZE = 100
 
@@ -30,8 +30,8 @@ class MackerelClient:
         resource_package = __name__
         resource_path = '/'.join(('protocol.json',))
 
-        protocol = resource_stream(resource_package, resource_path)
-        self.protocol = load(open(protocol))
+        protocol = resource_string(resource_package, resource_path)
+        self.protocol = loads(protocol)
         self.command_queue = deque()
 
         self.users = set()
