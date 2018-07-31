@@ -7,7 +7,7 @@ import socket
 from select import select
 
 import time
-from collections import deque
+from threading import Thread
 from pkg_resources import resource_string
 
 BUFFER_SIZE = 100
@@ -18,29 +18,43 @@ logging.basicConfig(format=LOG_FORMAT)
 logging.getLogger().setLevel(logging.INFO)
 
 
-class MackerelClient:
+class Node:
 
     def __init__(self, name, type_):
         self.name = name
         self.type = type_
+
         self.ip = None
         self.port = None
+
         self.socket = None
 
+        # Is the connection active?
+        self.running = False
+
+        # Are we waiting for a response to a command we sent to the server?
+        # (This momentarily deactivates the watcher so that it doesn't eat
+        # responses.)
+        self.waiting = False
+
+        # The following lines do the same thing as load(open('protocol.json'))
+        # but also work when this file is being called as part of a submodule,
+        # which it is. For more details, see:
+        # https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
         resource_package = __name__
         resource_path = '/'.join(('protocol.json',))
-
         protocol = resource_string(resource_package, resource_path)
-        self.protocol = loads(protocol)
-        self.command_queue = deque()
 
-        self.users = set()
+        # Load the command syntax file.
+        self.protocol = loads(protocol)
 
     def connect(self):
         """
         Attempt to establish a connection with server.
         """
         self.socket = None
+
+        # Make sure we're connecting to something.
         if not (self.ip and self.port):
             if not self.ip:
                 logging.error("IP address not set.")
@@ -48,6 +62,7 @@ class MackerelClient:
                 logging.error("Port not set.")
             return
 
+        # Initialize socket.
         try:
             s = socket.socket()
             s.settimeout(5)
@@ -60,6 +75,7 @@ class MackerelClient:
             self.socket = s
 
         if self.socket:
+            # Perform server handshake.
             logging.info("Found socket on %s:%d", self.ip, self.port)
 
             logging.info("Beginning handshake")
@@ -69,7 +85,14 @@ class MackerelClient:
                 self.safe_send(resp)
 
             data = self.safe_read()
-            self.handle_output(data)
+            success, _ = self.handle_output(data)
+
+            if success:
+                # We're connected. Start a separate thread to listen for
+                # incoming input from the server (like disconnect
+                # notifications.)
+                watcher = Thread(target=self.watch)
+                watcher.start()
         else:
             logging.error("No socket found.")
             return
@@ -80,7 +103,9 @@ class MackerelClient:
         """
         while self.running:
             time.sleep(0.1)
-            if self.socket and self.socket.fileno() >= 0:
+            is_watching = (self.socket and not self.waiting
+                           and self.socket.fileno() >= 0)
+            if is_watching:
                 has_data, _, _ = select([self.socket], [], [], 1)
                 if has_data:
                     data = self.safe_read()
@@ -102,7 +127,7 @@ class MackerelClient:
             if spec["type"] != "any" and spec["type"] != self.type:
                 logging.error("Invalid command for this node type.")
                 return False
-            if not (spec['min_args'] <= len(args) <= spec['max_args']):
+            if not (spec["min_args"] <= len(args) < spec["max_args"]):
                 logging.error("Invalid number of arguments.")
                 return False
             if not all(re.match(regex, arg) for regex, arg
@@ -130,6 +155,7 @@ class MackerelClient:
                 return (False, tuple())
             elif baseresp == "DISCONNECT":
                 self.disconnect()
+                self.running = False
                 self.reconnect()
                 return (False, tuple())
             elif baseresp == "RESP":
@@ -149,13 +175,15 @@ class MackerelClient:
         """
         Send user commands to server and parse output.
         """
-        data = ";".join([cmd] + list(args))
+        data = ';'.join([cmd] + list(args))
         # Check syntax.
         data = data.upper()
         print(data)
         if self.valid_command(data):
+            self.waiting = True
             self.safe_send(data)
             resp = self.safe_read()
+            self.waiting = False
             success, params = self.handle_output(resp)
 
             return (success, params)
@@ -178,7 +206,7 @@ class MackerelClient:
         while True:
             logging.info("Attempting to reconnect in %d seconds", wait_time)
             time.sleep(wait_time)
-            if wait_time < 32:
+            if wait_time < 512:
                 wait_time *= 2
 
             self.connect()
