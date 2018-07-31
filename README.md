@@ -10,10 +10,11 @@ from MackerelClient import MackerelClient
 # type is one of 'kiosk', 'tool', 'admin'
 client = MackerelClient(name, type)
 
-self.ip = SERVER_IP
-self.port = SERVER_PORT
+client.ip = SERVER_IP
+client.port = SERVER_PORT
 
-self.connect()
+client.connect()
 
-self.run_command(cmd, *args)
+if client.socket:
+  client.run_command(cmd, *args)
 ```
