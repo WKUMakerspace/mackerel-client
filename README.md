@@ -1,5 +1,5 @@
 # mackerel-client
-Mackerel system client. For use with a [Mackerel server](wkumakerspace/mackerel-server) instance.
+Mackerel system client. For use with a [Mackerel server](https://github.com/wkumakerspace/mackerel-server) instance.
 
 Requires Python 3.6.
 
