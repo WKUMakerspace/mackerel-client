@@ -3,11 +3,12 @@
 from json import load
 import logging
 import re
-from select import select
 import socket
+from select import select
+
 import time
-from threading import Thread
 from collections import deque
+from pkg_resources import resource_stream
 
 BUFFER_SIZE = 100
 
@@ -26,7 +27,11 @@ class MackerelClient:
         self.port = None
         self.socket = None
 
-        self.protocol = load(open("protocol.json"))
+        resource_package = __name__
+        resource_path = '/'.join(('protocol.json',))
+
+        protocol = resource_stream(resource_package, resource_path)
+        self.protocol = load(open(protocol))
         self.command_queue = deque()
 
         self.users = set()
