@@ -1,10 +1,19 @@
-# sprocket
-Two-way dumb terminal for Liam. Very probably doesn't work.
+# mackerel-client
+Mackerel system client. For use with a [Mackerel server](wkumakerspace/mackerel-server) instance.
 
 Requires Python 3.6.
 
 ## Usage
-```bash
-python3 sprocket.py ip port
+```python
+from MackerelClient import MackerelClient
+
+# type is one of 'kiosk', 'tool', 'admin'
+client = MackerelClient(name, type)
+
+self.ip = SERVER_IP
+self.port = SERVER_PORT
+
+self.connect()
+
+self.run_command(cmd, *args)
 ```
-`ip` defaults to `127.0.0.1`. `port` defaults to `4400`.
