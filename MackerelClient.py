@@ -26,11 +26,10 @@ class MackerelClient:
         self.port = None
         self.socket = None
 
-        self.running = False
-
         self.protocol = load(open("protocol.json"))
         self.command_queue = deque()
-        self.command_history = []
+
+        self.users = set()
 
     def connect(self):
         """
@@ -70,22 +69,6 @@ class MackerelClient:
             logging.error("No socket found.")
             return
 
-    def run(self):
-        if not self.socket:
-            logging.warning("Attempting to run without a connection, "
-                            "ignoring...")
-        else:
-            runner = Thread(target=self.runner, name="RUNNER")
-            watcher = Thread(target=self.watch, name="WATCHER")
-
-            runner.start()
-            watcher.start()
-
-        while self.running:
-            pass
-
-        logging.warning("Shutting down...")
-
     def watch(self):
         """
         Watch for incoming input from server.
@@ -97,17 +80,6 @@ class MackerelClient:
                 if has_data:
                     data = self.safe_read()
                     self.handle_output(data)
-
-    def runner(self):
-        """
-        Run basic I/O loop.
-        """
-        while self.running:
-            if self.command_queue:
-                cmd = self.command_queue.popleft()
-                self.command_history.append([cmd, None])
-                self.run_command(cmd)
-            time.sleep(0.1)
 
     def valid_command(self, cmd):
         """
@@ -146,44 +118,43 @@ class MackerelClient:
             if baseresp == "CONN_SUCCESS":
                 logging.info("Connected on %s:%d", self.ip, self.port)
                 self.running = True
+                return (True, tuple())
             elif baseresp == "CONN_FAILURE":
                 logging.error("Connection to %s:%d failed (%s)", self.ip,
                               self.port, resp_params[0])
+                return (False, tuple())
             elif baseresp == "DISCONNECT":
                 self.disconnect()
                 self.reconnect()
+                return (False, tuple())
             elif baseresp == "RESP":
                 logging.info("Command succeeded.")
                 if resp_params:
-                    self.command_history[-1][1] = True
                     logging.info("Response parameters are: {0}".format(
                                  '\t'.join(resp_params)))
+                return (True, tuple(resp_params))
             elif baseresp == "RESP_SUCCESS":
                 logging.info("Command succeeded.")
-                self.command_history[-1][1] = True
+                return (True, tuple())
             elif baseresp == "RESP_FAILURE":
                 logging.warning("Command failed.")
-                self.command_history[-1][1] = False
+                return (False, tuple())
 
-    def queue_command(self, *cmd):
-        self.command_queue.append(';'.join(cmd))
-        return
-
-    def run_command(self, cmd):
+    def run_command(self, cmd, *args):
         """
         Send user commands to server and parse output.
         """
+        data = ";".join([cmd] + list(args))
         # Check syntax.
-        cmd = cmd.upper()
-        if self.valid_command(cmd):
-            if cmd == "EXIT":
-                self.disconnect()
-                self.running = False
-                return
-
-            self.safe_send(cmd)
+        data = data.upper()
+        print(data)
+        if self.valid_command(data):
+            self.safe_send(data)
             resp = self.safe_read()
-            self.handle_output(resp)
+            success, params = self.handle_output(resp)
+
+            return (success, params)
+        return (False, tuple())
 
     def disconnect(self):
         """
